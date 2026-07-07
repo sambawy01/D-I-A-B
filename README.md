@@ -12,10 +12,17 @@
 
 ## Status
 
-Phase: Brainstorming complete - design spec written, architecture TBD.
+Phase: MVP scoped - 6 features across 3 pillars (Deals & Negotiation, Calendar, Content Asset Production). Architecture TBD.
+
+### MVP (6 features)
+- **Deals & Negotiation:** Structured Deal Card (payment folded in), Inbox Auto-Import, Hermes Copilot
+- **Calendar:** Cross-Deal Calendar (+ Kanban board view)
+- **Content Production & Handling:** Production Tracker, Inline Asset Approval (the hero)
+
+Everything else lives in the v2 backlog (see design spec).
 
 Next steps:
-1. Noor reviews the design spec
+1. Noor reviews the scoped MVP
 2. Architecture and tech stack discussion
 3. Implementation plan
 4. Build
