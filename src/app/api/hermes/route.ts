@@ -2,19 +2,20 @@ import { getUser } from "@/lib/auth";
 import { todayISO } from "@/lib/format";
 import { HERMES_TOOLS, executeHermesTool, type ToolDef } from "@/lib/hermes/tools";
 
-// Hermes runs on the shared Ollama endpoint (from the Hermes Gateway).
+// Hermes runs on the shared Ollama-cloud endpoint (from the Hermes Gateway),
+// which is OpenAI-compatible — OLLAMA_BASE_URL ends in /v1.
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
 const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
-const HERMES_MODEL = process.env.HERMES_MODEL || "qwen2.5"; // must be a tool-capable model
+const HERMES_MODEL = process.env.HERMES_MODEL || "glm-5.2";
 const MAX_TOOL_ROUNDS = 6;
 
+type ToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
 type ChatMsg =
-  | { role: "system" | "user" | "assistant"; content: string; tool_calls?: OllamaToolCall[] }
-  | { role: "tool"; content: string; tool_name?: string };
+  | { role: "system" | "user"; content: string }
+  | { role: "assistant"; content: string | null; tool_calls?: ToolCall[] }
+  | { role: "tool"; content: string; tool_call_id: string };
 
-type OllamaToolCall = { function: { name: string; arguments: Record<string, unknown> | string } };
-
-function ollamaTools(defs: ToolDef[]) {
+function openaiTools(defs: ToolDef[]) {
   return defs.map((d) => ({
     type: "function" as const,
     function: { name: d.name, description: d.description, parameters: d.parameters },
@@ -32,8 +33,8 @@ function systemPrompt() {
   ].join(" ");
 }
 
-async function ollamaChat(messages: ChatMsg[]) {
-  const res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+async function chat(messages: ChatMsg[]) {
+  const res = await fetch(`${OLLAMA_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -42,13 +43,14 @@ async function ollamaChat(messages: ChatMsg[]) {
     body: JSON.stringify({
       model: HERMES_MODEL,
       messages,
-      tools: ollamaTools(HERMES_TOOLS),
+      tools: openaiTools(HERMES_TOOLS),
+      tool_choice: "auto",
       stream: false,
     }),
   });
-  if (!res.ok) throw new Error(`Ollama ${res.status}: ${await res.text().catch(() => "")}`);
+  if (!res.ok) throw new Error(`model ${res.status}: ${await res.text().catch(() => "")}`);
   return (await res.json()) as {
-    message: { role: "assistant"; content?: string; tool_calls?: OllamaToolCall[] };
+    choices: { message: { content: string | null; tool_calls?: ToolCall[] } }[];
   };
 }
 
@@ -68,23 +70,21 @@ export async function POST(req: Request) {
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const { message } = await ollamaChat(convo);
+      const { choices } = await chat(convo);
+      const msg = choices?.[0]?.message;
+      if (!msg) return Response.json({ text: "Hermes returned no response." });
 
-      const calls = message.tool_calls ?? [];
+      const calls = msg.tool_calls ?? [];
       if (calls.length > 0) {
-        convo.push({ role: "assistant", content: message.content ?? "", tool_calls: calls });
+        convo.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
         for (const call of calls) {
-          const args =
-            typeof call.function.arguments === "string"
-              ? safeParse(call.function.arguments)
-              : call.function.arguments;
-          const out = await executeHermesTool(call.function.name, args);
-          convo.push({ role: "tool", tool_name: call.function.name, content: JSON.stringify(out) });
+          const out = await executeHermesTool(call.function.name, safeParse(call.function.arguments));
+          convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(out) });
         }
         continue;
       }
 
-      return Response.json({ text: (message.content ?? "").trim() || "…" });
+      return Response.json({ text: (msg.content ?? "").trim() || "…" });
     }
     return Response.json({ text: "That took more steps than expected — try narrowing the question." });
   } catch (e) {
