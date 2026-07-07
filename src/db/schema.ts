@@ -6,6 +6,7 @@ import {
   pgTable, pgEnum, uuid, text, integer, numeric, boolean, char, date,
   timestamp, jsonb, index,
 } from "drizzle-orm/pg-core";
+import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
 
 // ── Enums ────────────────────────────────────────────────────────────────────
 export const dealType = pgEnum("deal_type", ["influencer", "ugc", "hybrid"]);
@@ -151,3 +152,13 @@ export const messages = pgTable("messages", {
 }, (t) => ({
   dealIdx: index("messages_deal_idx").on(t.dealId),
 }));
+
+// ── Inferred row / insert types ──────────────────────────────────────────────
+export type Profile = InferSelectModel<typeof profiles>;
+export type Deal = InferSelectModel<typeof deals>;
+export type NewDeal = InferInsertModel<typeof deals>;
+export type Deliverable = InferSelectModel<typeof deliverables>;
+export type Asset = InferSelectModel<typeof assets>;
+export type Comment = InferSelectModel<typeof comments>;
+export type DealStage = (typeof dealStage.enumValues)[number];
+export type PaymentStatus = (typeof paymentStatus.enumValues)[number];

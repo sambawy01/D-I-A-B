@@ -20,8 +20,25 @@ export default function Home() {
         <li><strong>Content:</strong> Production Tracker · Inline Asset Approval (image-first)</li>
       </ul>
 
-      <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 40 }}>
-        Scaffold ready. Next: auth + the Deal Card, then the inbox-import magic moment.
+      <p style={{ marginTop: 40 }}>
+        <a
+          href="/login"
+          style={{
+            display: "inline-block",
+            padding: "10px 18px",
+            borderRadius: 8,
+            background: "var(--accent)",
+            color: "#1a1200",
+            fontWeight: 600,
+            textDecoration: "none",
+          }}
+        >
+          Sign in →
+        </a>
+      </p>
+
+      <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 24 }}>
+        Auth + Deal Card CRUD are live. Next: the inbox-import magic moment.
         See <code>docs/</code> for the spec, architecture, and schema.
       </p>
     </main>
