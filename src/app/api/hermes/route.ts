@@ -1,69 +1,101 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { getUser } from "@/lib/auth";
 import { todayISO } from "@/lib/format";
-import { HERMES_TOOLS, executeHermesTool } from "@/lib/hermes/tools";
+import { HERMES_TOOLS, executeHermesTool, type ToolDef } from "@/lib/hermes/tools";
 
-const MODEL = "claude-opus-4-8";
+// Hermes runs on the shared Ollama endpoint (from the Hermes Gateway).
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
+const HERMES_MODEL = process.env.HERMES_MODEL || "qwen2.5"; // must be a tool-capable model
 const MAX_TOOL_ROUNDS = 6;
+
+type ChatMsg =
+  | { role: "system" | "user" | "assistant"; content: string; tool_calls?: OllamaToolCall[] }
+  | { role: "tool"; content: string; tool_name?: string };
+
+type OllamaToolCall = { function: { name: string; arguments: Record<string, unknown> | string } };
+
+function ollamaTools(defs: ToolDef[]) {
+  return defs.map((d) => ({
+    type: "function" as const,
+    function: { name: d.name, description: d.description, parameters: d.parameters },
+  }));
+}
 
 function systemPrompt() {
   return [
     "You are Hermes, the AI copilot inside DIAB — a deal-management app for social-media creators.",
     `Today is ${todayISO()}.`,
     "Answer questions about the creator's deals, deliverables, payments, and schedule.",
-    "ALWAYS ground answers in the tools — never invent deal data, amounts, dates, or statuses. If a tool returns nothing, say so.",
-    "You are read-only right now: you can look things up and advise, but you cannot send emails, change deals, or take actions. If asked to do a write action, explain that it's coming soon and that the creator will confirm every change.",
-    "Be concise and practical. Lead with the answer. Use the creator's own currency formatting as returned by the tools.",
+    "ALWAYS use the tools to look up data — never invent deal data, amounts, dates, or statuses. If a tool returns nothing, say so.",
+    "You are read-only right now: you can look things up and advise, but you cannot send emails or change deals. If asked to take an action, say it's coming soon and that the creator will confirm every change.",
+    "Be concise and practical. Lead with the answer.",
   ].join(" ");
+}
+
+async function ollamaChat(messages: ChatMsg[]) {
+  const res = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(OLLAMA_API_KEY ? { authorization: `Bearer ${OLLAMA_API_KEY}` } : {}),
+    },
+    body: JSON.stringify({
+      model: HERMES_MODEL,
+      messages,
+      tools: ollamaTools(HERMES_TOOLS),
+      stream: false,
+    }),
+  });
+  if (!res.ok) throw new Error(`Ollama ${res.status}: ${await res.text().catch(() => "")}`);
+  return (await res.json()) as {
+    message: { role: "assistant"; content?: string; tool_calls?: OllamaToolCall[] };
+  };
 }
 
 export async function POST(req: Request) {
   const user = await getUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return Response.json({ text: "Hermes isn't configured yet (missing ANTHROPIC_API_KEY)." });
+  if (!OLLAMA_BASE_URL) {
+    return Response.json({ text: "Hermes isn't configured yet (missing OLLAMA_BASE_URL)." });
   }
 
-  const body = (await req.json()) as { messages?: Anthropic.MessageParam[] };
-  const convo: Anthropic.MessageParam[] = Array.isArray(body.messages) ? body.messages : [];
-  if (convo.length === 0) return Response.json({ text: "Ask me anything about your deals." });
+  const body = (await req.json()) as { messages?: { role: "user" | "assistant"; content: string }[] };
+  const incoming = Array.isArray(body.messages) ? body.messages : [];
+  if (incoming.length === 0) return Response.json({ text: "Ask me anything about your deals." });
 
-  const client = new Anthropic();
+  const convo: ChatMsg[] = [{ role: "system", content: systemPrompt() }, ...incoming];
 
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const res = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system: systemPrompt(),
-      tools: HERMES_TOOLS,
-      messages: convo,
-    });
+  try {
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const { message } = await ollamaChat(convo);
 
-    if (res.stop_reason === "tool_use") {
-      convo.push({ role: "assistant", content: res.content });
-      const toolResults: Anthropic.ToolResultBlockParam[] = [];
-      for (const block of res.content) {
-        if (block.type === "tool_use") {
-          const out = await executeHermesTool(block.name, block.input as Record<string, unknown>);
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: block.id,
-            content: JSON.stringify(out),
-          });
+      const calls = message.tool_calls ?? [];
+      if (calls.length > 0) {
+        convo.push({ role: "assistant", content: message.content ?? "", tool_calls: calls });
+        for (const call of calls) {
+          const args =
+            typeof call.function.arguments === "string"
+              ? safeParse(call.function.arguments)
+              : call.function.arguments;
+          const out = await executeHermesTool(call.function.name, args);
+          convo.push({ role: "tool", tool_name: call.function.name, content: JSON.stringify(out) });
         }
+        continue;
       }
-      convo.push({ role: "user", content: toolResults });
-      continue;
+
+      return Response.json({ text: (message.content ?? "").trim() || "…" });
     }
-
-    const text = res.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
-    return Response.json({ text: text || "…" });
+    return Response.json({ text: "That took more steps than expected — try narrowing the question." });
+  } catch (e) {
+    return Response.json({ text: `Hermes couldn't reach the model: ${(e as Error).message}` });
   }
+}
 
-  return Response.json({ text: "That took more steps than expected — try narrowing the question." });
+function safeParse(s: string): Record<string, unknown> {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return {};
+  }
 }

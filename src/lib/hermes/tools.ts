@@ -1,8 +1,18 @@
-import type Anthropic from "@anthropic-ai/sdk";
 import { listActiveDeals, getDeal } from "@/lib/deals";
 import { listDeliverables } from "@/lib/deliverables";
 import { listCalendarEvents } from "@/lib/calendar";
 import { formatMoney } from "@/lib/format";
+
+/** LLM-agnostic tool definition (JSON-schema `parameters`). */
+export type ToolDef = {
+  name: string;
+  description: string;
+  parameters: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+};
 
 /**
  * Hermes's READ tools. Each runs against the user's RLS-scoped Supabase session,
@@ -10,12 +20,12 @@ import { formatMoney } from "@/lib/format";
  * read another user's deals even if prompted to. Write actions (draft proposal,
  * send email) are a later increment and will route through a human confirm gate.
  */
-export const HERMES_TOOLS: Anthropic.Tool[] = [
+export const HERMES_TOOLS: ToolDef[] = [
   {
     name: "list_deals",
     description:
       "List the creator's active deals. Optionally filter by pipeline stage or payment status. Returns id, title, brand, type, stage, amount, currency, payment status and key dates.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         stage: { type: "string", description: "Optional pipeline stage filter, e.g. 'in_review'." },
@@ -26,7 +36,7 @@ export const HERMES_TOOLS: Anthropic.Tool[] = [
   {
     name: "get_deal",
     description: "Get one deal in full, including its deliverables and their statuses/due dates.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: { dealId: { type: "string", description: "The deal id." } },
       required: ["dealId"],
@@ -36,7 +46,7 @@ export const HERMES_TOOLS: Anthropic.Tool[] = [
     name: "list_upcoming",
     description:
       "List upcoming dated events (deliverable due dates, payment due, posting windows, exclusivity expiry) within the next N days across all active deals. Use for 'what's due this week' style questions.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: { days: { type: "integer", description: "Look-ahead window in days (default 7)." } },
     },
@@ -44,7 +54,7 @@ export const HERMES_TOOLS: Anthropic.Tool[] = [
   {
     name: "payment_summary",
     description: "Summarize money owed vs paid across active deals, grouped by currency.",
-    input_schema: { type: "object", properties: {} },
+    parameters: { type: "object", properties: {} },
   },
 ];
 
