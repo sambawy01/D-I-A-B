@@ -21,6 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             DIAB
           </Link>
           <Link href="/app" style={navLink}>Deals</Link>
+          <Link href="/app/calendar" style={navLink}>Calendar</Link>
           <Link href="/app/deals/new" style={navLink}>New deal</Link>
         </nav>
         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
