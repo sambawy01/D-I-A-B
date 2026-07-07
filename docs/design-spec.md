@@ -52,7 +52,7 @@ The MVP is a **complete single-player loop**: a deal lands in Gmail → Hermes s
 | # | Feature | Description |
 |---|---------|-------------|
 | 5 | **Production Tracker** | Per-deal deliverable tracking: what needs producing, status (to-produce → drafting → submitted → approved), deadline, asset preview. Auto-flags overdue items (which surface on the Calendar and as Hermes nudges). |
-| 6 | **Inline Asset Approval** | The hero feature — "Google Docs for video." Creator uploads a draft (video/image); brand views inline and drops **timestamped comments**, then approves or requests changes. Includes **versioning** ("v1/v2/v3", no more "send me the latest") and a **draft watermark** ("Draft — for approval — [creator] — [date]") to prevent screenshotting of unapproved content. |
+| 6 | **Inline Asset Approval** | The hero feature — "Google Docs for creative." **MVP is image-first:** creator uploads an image draft; brand views inline and drops **positioned comments**, then approves or requests changes. Includes **versioning** ("v1/v2/v3", no more "send me the latest") and a **draft watermark** ("Draft — for approval — [creator] — [date]"). **Video approval (timestamped comments) is a v1.1 fast-follow** — deferring it removes video infrastructure from the MVP entirely. See architecture.md. |
 
 ---
 
