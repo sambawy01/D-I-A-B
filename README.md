@@ -25,9 +25,32 @@ Everything else lives in the v2 backlog (see design spec).
 
 Next steps:
 1. Noor reviews the scoped MVP + stack
-2. Data model + schema design
-3. Implementation plan / milestone breakdown
-4. Build (start with the inbox-import "magic moment" wedge)
+2. ~~Data model + schema design~~ ✅ (docs/schema.md)
+3. ~~Scaffold the app~~ ✅ (Next.js + Drizzle + Supabase — boots & builds clean)
+4. Build: auth + Deal Card, then the inbox-import "magic moment" wedge
+
+## Getting started
+
+```bash
+npm install
+cp .env.example .env.local     # fill in Supabase + Anthropic keys
+
+npm run db:push                # create tables from the Drizzle schema
+# then apply RLS + triggers:
+#   psql "$DATABASE_URL" -f supabase/migrations/0001_init_rls.sql
+
+npm run dev                    # http://localhost:3000
+```
+
+Useful scripts: `npm run typecheck`, `npm run build`, `npm run db:generate`, `npm run db:studio`.
+
+### Project layout
+- `src/app` — Next.js App Router (UI + API routes)
+- `src/db` — Drizzle schema (`schema.ts`), client (`index.ts`), field Zod shapes (`fields.ts`)
+- `src/lib/supabase` — auth clients (browser / server / middleware)
+- `supabase/migrations` — RLS policies + triggers (applied after Drizzle push)
+- `drizzle` — generated SQL migrations
+- `docs` — spec, architecture, schema
 
 ## Origin
 
