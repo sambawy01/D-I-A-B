@@ -9,6 +9,7 @@
 
 - Design Spec: docs/design-spec.md
 - Architecture & Tech Stack: docs/architecture.md
+- Data Model & Schema: docs/schema.md
 - Brainstorming Session: docs/brainstorming-session.md
 
 ## Status
