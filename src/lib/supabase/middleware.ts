@@ -31,10 +31,9 @@ export async function updateSession(request: NextRequest) {
 
   // Gate the authenticated app area.
   if (!user && request.nextUrl.pathname.startsWith("/app")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return response;
