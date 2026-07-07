@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDeal } from "@/lib/deals";
+import { listDeliverables } from "@/lib/deliverables";
 import { dealStage, paymentStatus } from "@/db/schema";
 import { formatMoney, stageLabel } from "@/lib/format";
 import { DealForm } from "../deal-form";
+import { Deliverables } from "../deliverables";
 import { updateDeal, setStage, setPaymentStatus, archiveDeal } from "../actions";
 
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const deal = await getDeal(id);
   if (!deal) notFound();
+
+  const deliverables = await listDeliverables(id);
 
   return (
     <div>
@@ -50,8 +54,11 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
+      {/* Production Tracker */}
+      <Deliverables dealId={id} items={deliverables} />
+
       {/* Edit form */}
-      <h2 style={{ fontSize: 16, marginTop: 32, marginBottom: 12 }}>Brief</h2>
+      <h2 style={{ fontSize: 16, marginTop: 36, marginBottom: 12 }}>Brief</h2>
       <DealForm action={updateDeal.bind(null, id)} deal={deal} submitLabel="Save changes" />
 
       {/* Danger zone */}

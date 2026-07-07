@@ -28,3 +28,17 @@ const STAGE_LABELS: Record<string, string> = {
   paid: "Paid",
 };
 export const stageLabel = (s: string) => STAGE_LABELS[s] ?? s;
+
+const DELIVERABLE_STATUS_LABELS: Record<string, string> = {
+  to_produce: "To produce",
+  drafting: "Drafting",
+  submitted: "Submitted",
+  in_review: "In review",
+  approved: "Approved",
+  revision_requested: "Revision requested",
+};
+export const deliverableStatusLabel = (s: string) => DELIVERABLE_STATUS_LABELS[s] ?? s;
+
+/** Today as an ISO date string (YYYY-MM-DD), for comparing against `date` columns. */
+export const todayISO = () => new Date().toISOString().slice(0, 10);
+
