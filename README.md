@@ -16,18 +16,18 @@
 
 Phase: MVP scoped + stack decided. 6 features across 3 pillars (Deals & Negotiation, Calendar, Content Asset Production). Stack: TypeScript full-stack (Next.js + Supabase + Claude API). See docs/architecture.md.
 
-### MVP (6 features)
-- **Deals & Negotiation:** Structured Deal Card (payment folded in), Inbox Auto-Import, Hermes Copilot
-- **Calendar:** Cross-Deal Calendar (+ Kanban board view)
-- **Content Production & Handling:** Production Tracker, Inline Asset Approval (the hero)
+### MVP build status (6 features)
+- **Deals & Negotiation:** ✅ Deal Card (CRUD, payment, stage/Kanban) · ✅ Hermes Copilot (reactive, read-only) · ⏳ Inbox Auto-Import (paste fallback + Gmail via Composio — gated on Google OAuth verification)
+- **Calendar:** ✅ Cross-Deal Calendar (+ Kanban board view)
+- **Content Production & Handling:** ✅ Production Tracker · ✅ Inline Asset Approval (image-first, positioned comments, versions, watermark)
 
 Everything else lives in the v2 backlog (see design spec).
 
 Next steps:
-1. Noor reviews the scoped MVP + stack
-2. ~~Data model + schema design~~ ✅ (docs/schema.md)
-3. ~~Scaffold the app~~ ✅ (Next.js + Drizzle + Supabase — boots & builds clean)
-4. Build: auth + Deal Card, then the inbox-import "magic moment" wedge
+1. Spin up a Supabase project + Anthropic key, run migrations, and exercise the app end-to-end
+2. Hermes write-actions behind the confirm gate (draft proposals / follow-ups)
+3. Inbox Auto-Import: paste-an-email → Hermes extraction → deal draft (unblocked); wire live Gmail once OAuth verification lands
+4. Negotiation diff logging on deal term edits (deal_revisions)
 
 ## Getting started
 
@@ -36,8 +36,9 @@ npm install
 cp .env.example .env.local     # fill in Supabase + Anthropic keys
 
 npm run db:push                # create tables from the Drizzle schema
-# then apply RLS + triggers:
+# then apply RLS + triggers, then the storage bucket + policies:
 #   psql "$DATABASE_URL" -f supabase/migrations/0001_init_rls.sql
+#   psql "$DATABASE_URL" -f supabase/migrations/0002_storage.sql
 
 npm run dev                    # http://localhost:3000
 ```

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Deliverable } from "@/db/schema";
 import { deliverableStatus, platform } from "@/db/schema";
 import { deliverableStatusLabel, todayISO } from "@/lib/format";
@@ -37,6 +38,8 @@ export function Deliverables({ dealId, items }: { dealId: string; items: Deliver
                 <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>{d.description}</div>
               )}
             </div>
+
+            <Link href={`/app/deliverables/${d.id}`} style={openLink}>Open →</Link>
 
             <form action={setDeliverableStatus.bind(null, dealId, d.id)} style={inlineForm}>
               <select name="status" defaultValue={d.status} style={select}>
@@ -80,6 +83,7 @@ const row: React.CSSProperties = {
   marginBottom: 8,
   background: "#101015",
 };
+const openLink: React.CSSProperties = { color: "var(--accent)", textDecoration: "none", fontSize: 13, flex: "0 0 auto" };
 const inlineForm: React.CSSProperties = { display: "flex", gap: 6, alignItems: "center" };
 const addForm: React.CSSProperties = { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" };
 const field: React.CSSProperties = {
