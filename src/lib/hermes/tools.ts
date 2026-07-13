@@ -57,6 +57,29 @@ export const HERMES_TOOLS: ToolDef[] = [
     description: "Summarize money owed vs paid across active deals, grouped by currency.",
     parameters: { type: "object", properties: {} },
   },
+  {
+    name: "web_search",
+    description:
+      "Search the open web for information the creator's own data can't answer — typical rates/pricing, a brand's recent campaigns or reputation, hashtag/trend research, contract norms. Returns titles, URLs, and snippets.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "The search query." },
+        max_results: { type: "integer", description: "How many results (default 5, max 10)." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "web_fetch",
+    description:
+      "Fetch and read the main content of a specific URL (e.g. a result from web_search) when you need detail beyond the snippet.",
+    parameters: {
+      type: "object",
+      properties: { url: { type: "string", description: "The URL to read." } },
+      required: ["url"],
+    },
+  },
 ];
 
 /**
@@ -161,6 +184,22 @@ export async function buildProposal(
 
 type ToolInput = Record<string, unknown>;
 
+// Ollama Cloud web-search/fetch APIs live at the root (not the /v1 chat base),
+// authenticated with the same Ollama key Hermes already uses.
+const OLLAMA_ROOT = (process.env.OLLAMA_BASE_URL || "https://ollama.com/v1").replace(/\/v1\/?$/, "");
+const OLLAMA_KEY = process.env.OLLAMA_API_KEY;
+
+async function ollamaResearch(path: string, body: Record<string, unknown>): Promise<unknown> {
+  if (!OLLAMA_KEY) return { error: "web tools not configured (missing OLLAMA_API_KEY)" };
+  const res = await fetch(`${OLLAMA_ROOT}/api/${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${OLLAMA_KEY}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) return { error: `web ${path} ${res.status}` };
+  return res.json();
+}
+
 export async function executeHermesTool(name: string, input: ToolInput): Promise<unknown> {
   switch (name) {
     case "list_deals": {
@@ -227,6 +266,32 @@ export async function executeHermesTool(name: string, input: ToolInput): Promise
           { owed: formatMoney(v.owed, cur), paid: formatMoney(v.paid, cur) },
         ]),
       );
+    }
+    case "web_search": {
+      const query = String(input.query ?? "").trim();
+      if (!query) return { error: "empty query" };
+      const max = Math.min(Number(input.max_results ?? 5) || 5, 10);
+      const raw = (await ollamaResearch("web_search", { query, max_results: max })) as {
+        results?: { title?: string; url?: string; content?: string }[];
+        error?: string;
+      };
+      if (raw.error) return raw;
+      return (raw.results ?? []).slice(0, max).map((r) => ({
+        title: r.title,
+        url: r.url,
+        snippet: (r.content ?? "").slice(0, 500),
+      }));
+    }
+    case "web_fetch": {
+      const url = String(input.url ?? "").trim();
+      if (!url) return { error: "empty url" };
+      const raw = (await ollamaResearch("web_fetch", { url })) as {
+        title?: string;
+        content?: string;
+        error?: string;
+      };
+      if (raw.error) return raw;
+      return { title: raw.title, content: (raw.content ?? "").slice(0, 4000) };
     }
     default:
       return { error: `Unknown tool: ${name}` };
