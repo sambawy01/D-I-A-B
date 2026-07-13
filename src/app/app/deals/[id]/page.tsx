@@ -16,91 +16,48 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   const deliverables = await listDeliverables(id);
 
   return (
-    <div>
-      <Link href="/app" style={{ color: "var(--muted)", fontSize: 13 }}>← Deals</Link>
+    <div className="reveal reveal-1">
+      <Link href="/app" className="nav-link" style={{ fontSize: 13 }}>← Deals</Link>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 8 }}>
-        <h1 style={{ fontSize: 26, margin: 0 }}>{deal.title}</h1>
-        <span style={{ color: "var(--muted)", fontSize: 14 }}>
-          {deal.brandName ?? "—"} · {deal.dealType}
-        </span>
-      </div>
-
-      {/* Quick controls: stage + payment status */}
-      <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
-        <form action={setStage.bind(null, id)} style={pill}>
-          <label style={pillLabel}>Stage</label>
-          <select name="stage" defaultValue={deal.stage} style={pillSelect}>
-            {dealStage.enumValues.map((s) => (
-              <option key={s} value={s}>{stageLabel(s)}</option>
-            ))}
-          </select>
-          <button type="submit" style={pillBtn}>Move</button>
-        </form>
-
-        <form action={setPaymentStatus.bind(null, id)} style={pill}>
-          <label style={pillLabel}>Payment</label>
-          <select name="paymentStatus" defaultValue={deal.paymentStatus} style={pillSelect}>
-            {paymentStatus.enumValues.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <button type="submit" style={pillBtn}>Set</button>
-        </form>
-
-        <div style={{ ...pill, alignItems: "baseline" }}>
-          <span style={pillLabel}>Amount</span>
-          <strong>{formatMoney(deal.amountTotalMinor, deal.currency)}</strong>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 14, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <p className="eyebrow" style={{ marginBottom: 8 }}>{deal.brandName ?? "—"} · {deal.dealType}</p>
+          <h1 className="display" style={{ fontSize: 40, margin: 0 }}>{deal.title}</h1>
         </div>
+        <div className="display gold-text" style={{ fontSize: 30 }}>{formatMoney(deal.amountTotalMinor, deal.currency)}</div>
       </div>
 
-      {/* Production Tracker */}
+      {/* Quick controls */}
+      <div style={{ display: "flex", gap: 12, marginTop: 20, flexWrap: "wrap" }}>
+        <form action={setStage.bind(null, id)} className="pill">
+          <span className="field-label" style={{ margin: 0 }}>Stage</span>
+          <select name="stage" defaultValue={deal.stage} className="field" style={pillSelect}>
+            {dealStage.enumValues.map((s) => <option key={s} value={s}>{stageLabel(s)}</option>)}
+          </select>
+          <button type="submit" className="btn btn-ghost btn-sm">Move</button>
+        </form>
+
+        <form action={setPaymentStatus.bind(null, id)} className="pill">
+          <span className="field-label" style={{ margin: 0 }}>Payment</span>
+          <select name="paymentStatus" defaultValue={deal.paymentStatus} className="field" style={pillSelect}>
+            {paymentStatus.enumValues.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <button type="submit" className="btn btn-ghost btn-sm">Set</button>
+        </form>
+      </div>
+
       <Deliverables dealId={id} items={deliverables} />
 
-      {/* Edit form */}
-      <h2 style={{ fontSize: 16, marginTop: 36, marginBottom: 12 }}>Brief</h2>
+      <h2 className="display" style={{ fontSize: 22, marginTop: 40, marginBottom: 14 }}>Brief</h2>
       <DealForm action={updateDeal.bind(null, id)} deal={deal} submitLabel="Save changes" />
 
-      {/* Danger zone */}
-      <form action={archiveDeal.bind(null, id)} style={{ marginTop: 32 }}>
-        <button type="submit" style={archiveBtn}>Archive deal</button>
+      <form action={archiveDeal.bind(null, id)} style={{ marginTop: 36 }}>
+        <button type="submit" className="btn btn-ghost btn-sm" style={{ color: "#e79b93", borderColor: "rgba(220,90,90,0.3)" }}>
+          Archive deal
+        </button>
       </form>
     </div>
   );
 }
 
-const pill: React.CSSProperties = {
-  display: "flex",
-  gap: 8,
-  alignItems: "center",
-  background: "#101015",
-  border: "1px solid #1e1e26",
-  borderRadius: 10,
-  padding: "8px 12px",
-};
-const pillLabel: React.CSSProperties = { fontSize: 12, color: "var(--muted)" };
-const pillSelect: React.CSSProperties = {
-  background: "#141419",
-  color: "var(--fg)",
-  border: "1px solid #2a2a33",
-  borderRadius: 6,
-  padding: "4px 8px",
-};
-const pillBtn: React.CSSProperties = {
-  border: "1px solid #2a2a33",
-  background: "transparent",
-  color: "var(--fg)",
-  borderRadius: 6,
-  padding: "4px 10px",
-  cursor: "pointer",
-  fontSize: 13,
-};
-const archiveBtn: React.CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 8,
-  border: "1px solid #4a1f22",
-  background: "transparent",
-  color: "#e08a8a",
-  cursor: "pointer",
-  fontSize: 13,
-};
+const pillSelect: React.CSSProperties = { width: "auto", padding: "5px 10px", fontSize: 14, background: "rgba(0,0,0,0.25)" };

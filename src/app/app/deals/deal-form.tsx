@@ -12,93 +12,61 @@ export function DealForm({ action, deal, submitLabel }: Props) {
   const f = (deal?.fields ?? {}) as { notes?: string };
 
   return (
-    <form action={action} style={{ maxWidth: 560 }}>
+    <form action={action} style={{ maxWidth: 620 }}>
       <Row label="Title">
-        <input name="title" required defaultValue={deal?.title ?? ""} style={input} />
+        <input name="title" required defaultValue={deal?.title ?? ""} className="field" />
       </Row>
-
       <Row label="Brand">
-        <input name="brandName" defaultValue={deal?.brandName ?? ""} style={input} />
+        <input name="brandName" defaultValue={deal?.brandName ?? ""} className="field" />
       </Row>
 
       <div style={{ display: "flex", gap: 12 }}>
         <Row label="Type" grow>
-          <select name="dealType" defaultValue={deal?.dealType ?? "influencer"} style={input}>
-            {dealType.enumValues.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
+          <select name="dealType" defaultValue={deal?.dealType ?? "influencer"} className="field">
+            {dealType.enumValues.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </Row>
         <Row label="Currency" grow>
-          <input name="currency" maxLength={3} defaultValue={deal?.currency ?? "EUR"} style={input} />
+          <input name="currency" maxLength={3} defaultValue={deal?.currency ?? "EUR"} className="field" />
         </Row>
         <Row label="Amount" grow>
-          <input
-            name="amountMajor"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0.00"
-            defaultValue={minorToMajorInput(deal?.amountTotalMinor ?? null)}
-            style={input}
-          />
+          <input name="amountMajor" type="number" step="0.01" min="0" placeholder="0.00"
+            defaultValue={minorToMajorInput(deal?.amountTotalMinor ?? null)} className="field" />
         </Row>
       </div>
 
       <div style={{ display: "flex", gap: 12 }}>
         <Row label="Payment due" grow>
-          <input name="paymentDueDate" type="date" defaultValue={deal?.paymentDueDate ?? ""} style={input} />
+          <input name="paymentDueDate" type="date" defaultValue={deal?.paymentDueDate ?? ""} className="field" />
         </Row>
         <Row label="Exclusivity until" grow>
-          <input name="exclusivityUntil" type="date" defaultValue={deal?.exclusivityUntil ?? ""} style={input} />
+          <input name="exclusivityUntil" type="date" defaultValue={deal?.exclusivityUntil ?? ""} className="field" />
         </Row>
       </div>
 
       <div style={{ display: "flex", gap: 12 }}>
         <Row label="Posting window — start" grow>
-          <input name="postingWindowStart" type="date" defaultValue={deal?.postingWindowStart ?? ""} style={input} />
+          <input name="postingWindowStart" type="date" defaultValue={deal?.postingWindowStart ?? ""} className="field" />
         </Row>
         <Row label="end" grow>
-          <input name="postingWindowEnd" type="date" defaultValue={deal?.postingWindowEnd ?? ""} style={input} />
+          <input name="postingWindowEnd" type="date" defaultValue={deal?.postingWindowEnd ?? ""} className="field" />
         </Row>
       </div>
 
       <Row label="Notes / brief">
-        <textarea name="notes" rows={4} defaultValue={f.notes ?? ""} style={{ ...input, resize: "vertical" }} />
+        <textarea name="notes" rows={4} defaultValue={f.notes ?? ""} className="field" style={{ resize: "vertical" }} />
       </Row>
 
-      <button type="submit" style={primaryBtn}>{submitLabel}</button>
+      <button type="submit" className="btn btn-primary" style={{ marginTop: 6 }}>{submitLabel}</button>
     </form>
   );
 }
 
 function Row({ label, children, grow }: { label: string; children: React.ReactNode; grow?: boolean }) {
   return (
-    <div style={{ marginBottom: 14, flex: grow ? 1 : undefined }}>
-      <label style={{ display: "block", fontSize: 13, color: "var(--muted)", marginBottom: 6 }}>
-        {label}
-      </label>
+    <div style={{ marginBottom: 15, flex: grow ? 1 : undefined }}>
+      <label className="field-label">{label}</label>
       {children}
     </div>
   );
 }
-
-const input: React.CSSProperties = {
-  width: "100%",
-  padding: "9px 11px",
-  borderRadius: 8,
-  border: "1px solid #2a2a33",
-  background: "#141419",
-  color: "var(--fg)",
-  fontSize: 15,
-};
-const primaryBtn: React.CSSProperties = {
-  marginTop: 8,
-  padding: "10px 18px",
-  borderRadius: 8,
-  border: "none",
-  background: "var(--accent)",
-  color: "#1a1200",
-  fontWeight: 600,
-  cursor: "pointer",
-};

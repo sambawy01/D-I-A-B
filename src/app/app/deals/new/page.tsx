@@ -4,9 +4,10 @@ import { createDeal } from "../actions";
 
 export default function NewDealPage() {
   return (
-    <div>
-      <Link href="/app" style={{ color: "var(--muted)", fontSize: 13 }}>← Deals</Link>
-      <h1 style={{ fontSize: 24, marginTop: 8 }}>New deal</h1>
+    <div className="reveal reveal-1">
+      <Link href="/app" className="nav-link" style={{ fontSize: 13 }}>← Deals</Link>
+      <p className="eyebrow" style={{ margin: "18px 0 8px" }}>New</p>
+      <h1 className="display" style={{ fontSize: 34, marginTop: 0 }}>Create a deal</h1>
       <DealForm action={createDeal} submitLabel="Create deal" />
     </div>
   );

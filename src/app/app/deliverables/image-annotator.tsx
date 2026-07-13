@@ -9,7 +9,7 @@ type Props = {
   watermark: boolean;
   deliverableId: string;
   comments: Pin[];
-  addComment: (formData: FormData) => Promise<void>; // pre-bound with assetId + deliverableId
+  addComment: (formData: FormData) => Promise<void>;
   resolveComment: (commentId: string, deliverableId: string) => Promise<void>;
 };
 
@@ -34,67 +34,44 @@ export function ImageAnnotator({ imageUrl, watermark, deliverableId, comments, a
     fd.set("posX", String(draft.x));
     fd.set("posY", String(draft.y));
     fd.set("body", text.trim());
-    startTransition(async () => {
-      await addComment(fd);
-      setDraft(null);
-      setText("");
-    });
+    startTransition(async () => { await addComment(fd); setDraft(null); setText(""); });
   }
 
   const open = comments.filter((c) => !c.resolved);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 260px", gap: 16, alignItems: "start" }}>
-      <div ref={wrapRef} onClick={onImageClick} style={{ position: "relative", cursor: "crosshair", lineHeight: 0 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 264px", gap: 18, alignItems: "start" }}>
+      <div ref={wrapRef} onClick={onImageClick} style={{ position: "relative", cursor: "crosshair", lineHeight: 0, borderRadius: "var(--r-md)", overflow: "hidden", border: "1px solid var(--glass-border)" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={imageUrl} alt="Asset draft" style={{ width: "100%", borderRadius: 10, display: "block" }} />
-
+        <img src={imageUrl} alt="Asset draft" style={{ width: "100%", display: "block" }} />
         {watermark && <div style={watermarkOverlay}>DRAFT — FOR APPROVAL</div>}
 
         {open.map((c, i) => (
-          <span key={c.id} style={{ ...pin, left: `${c.x * 100}%`, top: `${c.y * 100}%` }} title={c.body}>
-            {i + 1}
-          </span>
+          <span key={c.id} style={{ ...pin, left: `${c.x * 100}%`, top: `${c.y * 100}%` }} title={c.body}>{i + 1}</span>
         ))}
 
         {draft && (
-          <div
-            style={{ ...draftBox, left: `${draft.x * 100}%`, top: `${draft.y * 100}%` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <textarea
-              autoFocus
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Comment on this spot…"
-              rows={2}
-              style={draftInput}
-            />
+          <div style={{ ...draftBox, left: `${draft.x * 100}%`, top: `${draft.y * 100}%` }} onClick={(e) => e.stopPropagation()}>
+            <textarea autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="Comment on this spot…" rows={2}
+              className="field" style={{ fontSize: 13, resize: "vertical" }} />
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <button onClick={submitDraft} disabled={pending} style={okBtn}>Add</button>
-              <button onClick={() => setDraft(null)} style={cancelBtn}>Cancel</button>
+              <button onClick={submitDraft} disabled={pending} className="btn btn-primary btn-sm">Add</button>
+              <button onClick={() => setDraft(null)} className="btn btn-ghost btn-sm">Cancel</button>
             </div>
           </div>
         )}
       </div>
 
       <div>
-        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 8 }}>
-          {open.length} open comment{open.length === 1 ? "" : "s"} · click the image to add
-        </div>
+        <p className="eyebrow" style={{ marginBottom: 10 }}>{open.length} open · click to add</p>
         {open.map((c, i) => (
-          <div key={c.id} style={commentCard}>
+          <div key={c.id} className="card" style={{ padding: "9px 11px", marginBottom: 8 }}>
             <div style={{ display: "flex", gap: 8 }}>
               <span style={pinInline}>{i + 1}</span>
               <span style={{ flex: 1, fontSize: 14 }}>{c.body}</span>
             </div>
-            <button
-              onClick={() => startTransition(() => resolveComment(c.id, deliverableId))}
-              disabled={pending}
-              style={resolveBtn}
-            >
-              Resolve
-            </button>
+            <button onClick={() => startTransition(() => resolveComment(c.id, deliverableId))} disabled={pending}
+              className="btn btn-ghost btn-sm" style={{ marginTop: 6, fontSize: 12, padding: "3px 10px" }}>Resolve</button>
           </div>
         ))}
       </div>
@@ -103,34 +80,20 @@ export function ImageAnnotator({ imageUrl, watermark, deliverableId, comments, a
 }
 
 const pin: React.CSSProperties = {
-  position: "absolute", transform: "translate(-50%,-50%)",
-  width: 22, height: 22, borderRadius: 999, background: "var(--accent)", color: "#1a1200",
-  fontSize: 12, fontWeight: 700, display: "grid", placeItems: "center", cursor: "default",
-  boxShadow: "0 2px 8px rgba(0,0,0,.5)",
+  position: "absolute", transform: "translate(-50%,-50%)", width: 24, height: 24, borderRadius: 999,
+  background: "linear-gradient(120deg,var(--gold-deep),var(--champagne))", color: "#241a08", fontSize: 12, fontWeight: 700,
+  display: "grid", placeItems: "center", cursor: "default", boxShadow: "0 2px 12px rgba(216,184,120,0.55)", border: "1px solid rgba(255,246,226,0.6)",
 };
 const pinInline: React.CSSProperties = {
-  width: 20, height: 20, borderRadius: 999, background: "var(--accent)", color: "#1a1200",
-  fontSize: 11, fontWeight: 700, display: "grid", placeItems: "center", flex: "0 0 auto",
+  width: 20, height: 20, borderRadius: 999, background: "linear-gradient(120deg,var(--gold-deep),var(--champagne))",
+  color: "#241a08", fontSize: 11, fontWeight: 700, display: "grid", placeItems: "center", flex: "0 0 auto",
 };
 const draftBox: React.CSSProperties = {
-  position: "absolute", transform: "translate(-50%, 12px)", zIndex: 5,
-  background: "#0e0e13", border: "1px solid #2a2a33", borderRadius: 10, padding: 8, width: 220,
-};
-const draftInput: React.CSSProperties = {
-  width: "100%", background: "#141419", color: "var(--fg)", border: "1px solid #2a2a33",
-  borderRadius: 6, padding: "6px 8px", fontSize: 13, resize: "vertical", lineHeight: 1.4,
-};
-const okBtn: React.CSSProperties = { border: "none", background: "var(--accent)", color: "#1a1200", fontWeight: 600, borderRadius: 6, padding: "5px 12px", cursor: "pointer" };
-const cancelBtn: React.CSSProperties = { border: "1px solid #2a2a33", background: "transparent", color: "var(--fg)", borderRadius: 6, padding: "5px 12px", cursor: "pointer" };
-const commentCard: React.CSSProperties = {
-  border: "1px solid #1e1e26", borderRadius: 10, padding: "8px 10px", marginBottom: 8, background: "#101015",
-};
-const resolveBtn: React.CSSProperties = {
-  marginTop: 6, border: "1px solid #2a2a33", background: "transparent", color: "var(--muted)",
-  borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontSize: 12,
+  position: "absolute", transform: "translate(-50%, 12px)", zIndex: 5, width: 224, padding: 8,
+  background: "rgba(12,12,19,0.92)", backdropFilter: "blur(14px)", border: "1px solid var(--glass-border)", borderRadius: 12,
 };
 const watermarkOverlay: React.CSSProperties = {
-  position: "absolute", inset: 0, display: "grid", placeItems: "center",
-  color: "rgba(255,255,255,.28)", fontWeight: 800, fontSize: "clamp(18px, 5vw, 44px)",
-  letterSpacing: 2, transform: "rotate(-18deg)", pointerEvents: "none", userSelect: "none",
+  position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "rgba(255,255,255,0.26)",
+  fontWeight: 800, fontSize: "clamp(18px, 5vw, 46px)", letterSpacing: 3, transform: "rotate(-18deg)",
+  pointerEvents: "none", userSelect: "none", fontFamily: "var(--font-display), serif",
 };

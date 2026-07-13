@@ -8,7 +8,6 @@ export default async function Dashboard() {
   const deals = await listActiveDeals();
   const nudges = await computeNudges();
 
-  // Payment snapshot, grouped by currency (amounts across currencies don't sum).
   const snapshot = new Map<string, { owed: number; paid: number }>();
   for (const d of deals) {
     if (d.amountTotalMinor == null) continue;
@@ -24,119 +23,77 @@ export default async function Dashboard() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ fontSize: 24, margin: 0 }}>Deals</h1>
-        <Link href="/app/deals/new" style={newBtn}>+ New deal</Link>
+      <div className="reveal reveal-1" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 16 }}>
+        <div>
+          <p className="eyebrow" style={{ marginBottom: 8 }}>Your atelier</p>
+          <h1 className="display" style={{ fontSize: 40, margin: 0 }}>Deals</h1>
+        </div>
+        <Link href="/app/deals/new" className="btn btn-primary">+ New deal</Link>
       </div>
 
-      {/* Proactive: needs attention */}
+      {/* Needs attention */}
       {nudges.length > 0 && (
-        <div style={{ marginTop: 16, border: "1px solid #2a2118", borderRadius: 12, padding: "12px 14px", background: "#12100b" }}>
-          <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600, marginBottom: 8 }}>
-            Needs attention
-          </div>
+        <div className="glass reveal reveal-2" style={{ marginTop: 24, padding: "16px 18px" }}>
+          <p className="eyebrow" style={{ marginBottom: 10 }}>Needs attention</p>
           {nudges.slice(0, 8).map((n) => (
-            <Link
-              key={n.id}
-              href={`/app/deals/${n.dealId}`}
-              style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "3px 0", textDecoration: "none", color: "var(--fg)" }}
-            >
-              <span aria-hidden>{n.severity === "overdue" ? "🔴" : "🟡"}</span>
-              <span style={{ fontSize: 14 }}>{n.text}</span>
+            <Link key={n.id} href={`/app/deals/${n.dealId}`}
+              style={{ display: "flex", gap: 10, alignItems: "baseline", padding: "5px 0", color: "var(--fg)" }}>
+              <span aria-hidden style={{ filter: "saturate(1.2)" }}>{n.severity === "overdue" ? "🔴" : "🟡"}</span>
+              <span style={{ fontSize: 14.5 }}>{n.text}</span>
             </Link>
           ))}
-          {nudges.length > 8 && (
-            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>+{nudges.length - 8} more</div>
-          )}
+          {nudges.length > 8 && <div style={{ color: "var(--faint)", fontSize: 12, marginTop: 6 }}>+{nudges.length - 8} more</div>}
         </div>
       )}
 
       {/* Payment snapshot */}
-      <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
-        {snapshot.size === 0 ? (
-          <span style={{ color: "var(--muted)", fontSize: 14 }}>No amounts yet.</span>
-        ) : (
-          [...snapshot.entries()].map(([cur, s]) => (
-            <div key={cur} style={snapCard}>
-              <div style={{ fontSize: 12, color: "var(--muted)" }}>{cur}</div>
-              <div style={{ fontSize: 15 }}>
-                <strong style={{ color: "var(--accent)" }}>{formatMoney(s.owed, cur)}</strong> owed
-                {"  ·  "}
-                <span style={{ color: "var(--muted)" }}>{formatMoney(s.paid, cur)} paid</span>
-              </div>
+      {snapshot.size > 0 && (
+        <div className="reveal reveal-2" style={{ display: "flex", gap: 14, marginTop: 20, flexWrap: "wrap" }}>
+          {[...snapshot.entries()].map(([cur, s]) => (
+            <div key={cur} className="card" style={{ padding: "16px 20px", minWidth: 200 }}>
+              <div className="eyebrow" style={{ marginBottom: 8 }}>{cur}</div>
+              <div className="display gold-text" style={{ fontSize: 26 }}>{formatMoney(s.owed, cur)}</div>
+              <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 2 }}>owed · {formatMoney(s.paid, cur)} paid</div>
             </div>
-          ))
-        )}
-      </div>
-
-      {deals.length === 0 && (
-        <p style={{ color: "var(--muted)", marginTop: 32 }}>
-          No deals yet. <Link href="/app/deals/new">Create your first one</Link> — or, soon,
-          let Hermes import them from your inbox.
-        </p>
+          ))}
+        </div>
       )}
 
-      {/* Kanban-lite: one column per stage */}
-      <div style={{ display: "flex", gap: 14, marginTop: 24, overflowX: "auto", paddingBottom: 8 }}>
-        {dealStage.enumValues.map((stage) => {
-          const items = byStage.get(stage)!;
-          return (
-            <div key={stage} style={column}>
-              <div style={colHeader}>
-                {stageLabel(stage)} <span style={{ color: "var(--muted)" }}>{items.length}</span>
+      {deals.length === 0 && (
+        <div className="glass reveal reveal-3" style={{ marginTop: 28, padding: "40px 32px", textAlign: "center" }}>
+          <p className="display" style={{ fontSize: 22, margin: "0 0 8px" }}>Your first deal awaits.</p>
+          <p style={{ color: "var(--muted)", margin: "0 0 20px" }}>
+            Create one by hand — or, soon, let Hermes import them from your inbox.
+          </p>
+          <Link href="/app/deals/new" className="btn btn-primary">Create a deal</Link>
+        </div>
+      )}
+
+      {/* Kanban */}
+      {deals.length > 0 && (
+        <div className="reveal reveal-3" style={{ display: "flex", gap: 14, marginTop: 28, overflowX: "auto", paddingBottom: 10 }}>
+          {dealStage.enumValues.map((stage) => {
+            const items = byStage.get(stage)!;
+            return (
+              <div key={stage} className="glass" style={{ minWidth: 216, flex: "0 0 auto", padding: 12, background: "rgba(255,255,255,0.025)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 4px 10px" }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, letterSpacing: "0.04em" }}>{stageLabel(stage)}</span>
+                  <span className="chip">{items.length}</span>
+                </div>
+                {items.map((d) => (
+                  <Link key={d.id} href={`/app/deals/${d.id}`} className="card" style={{ display: "block", padding: "12px 14px", marginBottom: 9 }}>
+                    <div className="display" style={{ fontSize: 16 }}>{d.title}</div>
+                    <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 2 }}>{d.brandName ?? "—"} · {d.dealType}</div>
+                    {d.amountTotalMinor != null && (
+                      <div className="gold-text" style={{ fontSize: 14, marginTop: 6, fontWeight: 600 }}>{formatMoney(d.amountTotalMinor, d.currency)}</div>
+                    )}
+                  </Link>
+                ))}
               </div>
-              {items.map((d) => (
-                <Link key={d.id} href={`/app/deals/${d.id}`} style={card}>
-                  <div style={{ fontWeight: 600 }}>{d.title}</div>
-                  <div style={{ color: "var(--muted)", fontSize: 12 }}>
-                    {d.brandName ?? "—"} · {d.dealType}
-                  </div>
-                  {d.amountTotalMinor != null && (
-                    <div style={{ fontSize: 13, marginTop: 4 }}>
-                      {formatMoney(d.amountTotalMinor, d.currency)}
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
-
-const newBtn: React.CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 8,
-  background: "var(--accent)",
-  color: "#1a1200",
-  fontWeight: 600,
-  textDecoration: "none",
-  fontSize: 14,
-};
-const snapCard: React.CSSProperties = {
-  border: "1px solid #1e1e26",
-  borderRadius: 10,
-  padding: "10px 14px",
-  background: "#101015",
-};
-const column: React.CSSProperties = {
-  minWidth: 200,
-  flex: "0 0 auto",
-  background: "#0e0e13",
-  border: "1px solid #1a1a22",
-  borderRadius: 12,
-  padding: 10,
-};
-const colHeader: React.CSSProperties = { fontSize: 13, fontWeight: 600, marginBottom: 8, padding: "2px 4px" };
-const card: React.CSSProperties = {
-  display: "block",
-  background: "#16161d",
-  border: "1px solid #23232c",
-  borderRadius: 10,
-  padding: "10px 12px",
-  marginBottom: 8,
-  textDecoration: "none",
-  color: "var(--fg)",
-};
