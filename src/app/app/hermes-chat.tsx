@@ -2,11 +2,12 @@
 
 import { useRef, useState } from "react";
 import type { HermesProposal } from "@/lib/hermes/types";
+import type { Nudge } from "@/lib/nudges";
 import { confirmHermesAction } from "./hermes-actions";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-export function HermesChat() {
+export function HermesChat({ nudges = [] }: { nudges?: Nudge[] }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -63,10 +64,32 @@ export function HermesChat() {
     setMessages((m) => [...m, { role: "assistant", content: "Okay, cancelled — nothing changed." }]);
   }
 
+  function openChat() {
+    setOpen(true);
+    // Greet with proactive nudges the first time it opens.
+    if (messages.length === 0 && nudges.length > 0) {
+      const lines = nudges
+        .slice(0, 8)
+        .map((n) => (n.severity === "overdue" ? "🔴 " : "🟡 ") + n.text)
+        .join("\n");
+      const extra = nudges.length > 8 ? `\n…and ${nudges.length - 8} more.` : "";
+      setMessages([
+        { role: "assistant", content: `Here's what needs your attention:\n\n${lines}${extra}\n\nAsk me to act on any of these.` },
+      ]);
+    }
+  }
+
+  const overdueCount = nudges.filter((n) => n.severity === "overdue").length;
+
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} style={fab} aria-label="Open Hermes">
+      <button onClick={openChat} style={fab} aria-label="Open Hermes">
         Ask Hermes
+        {nudges.length > 0 && (
+          <span style={{ ...fabBadge, background: overdueCount > 0 ? "#c0392b" : "#7a5c17" }}>
+            {nudges.length}
+          </span>
+        )}
       </button>
     );
   }
@@ -124,6 +147,12 @@ const fab: React.CSSProperties = {
   padding: "12px 18px", borderRadius: 999, border: "none",
   background: "var(--accent)", color: "#1a1200", fontWeight: 600, cursor: "pointer",
   boxShadow: "0 6px 24px rgba(0,0,0,.4)",
+  display: "flex", alignItems: "center", gap: 8,
+};
+const fabBadge: React.CSSProperties = {
+  minWidth: 20, height: 20, padding: "0 6px", borderRadius: 999,
+  color: "#fff", fontSize: 12, fontWeight: 700,
+  display: "inline-grid", placeItems: "center",
 };
 const panel: React.CSSProperties = {
   position: "fixed", right: 20, bottom: 20, zIndex: 50,

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
+import { computeNudges } from "@/lib/nudges";
 import { signOut } from "@/app/login/actions";
 import { HermesChat } from "./hermes-chat";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const nudges = await computeNudges();
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -33,7 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
       <main style={{ padding: "28px 24px", maxWidth: 1100, margin: "0 auto" }}>{children}</main>
-      <HermesChat />
+      <HermesChat nudges={nudges} />
     </div>
   );
 }

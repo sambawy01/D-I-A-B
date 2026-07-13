@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { listActiveDeals } from "@/lib/deals";
+import { computeNudges } from "@/lib/nudges";
 import { dealStage, type Deal } from "@/db/schema";
 import { formatMoney, stageLabel } from "@/lib/format";
 
 export default async function Dashboard() {
   const deals = await listActiveDeals();
+  const nudges = await computeNudges();
 
   // Payment snapshot, grouped by currency (amounts across currencies don't sum).
   const snapshot = new Map<string, { owed: number; paid: number }>();
@@ -26,6 +28,28 @@ export default async function Dashboard() {
         <h1 style={{ fontSize: 24, margin: 0 }}>Deals</h1>
         <Link href="/app/deals/new" style={newBtn}>+ New deal</Link>
       </div>
+
+      {/* Proactive: needs attention */}
+      {nudges.length > 0 && (
+        <div style={{ marginTop: 16, border: "1px solid #2a2118", borderRadius: 12, padding: "12px 14px", background: "#12100b" }}>
+          <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600, marginBottom: 8 }}>
+            Needs attention
+          </div>
+          {nudges.slice(0, 8).map((n) => (
+            <Link
+              key={n.id}
+              href={`/app/deals/${n.dealId}`}
+              style={{ display: "flex", gap: 8, alignItems: "baseline", padding: "3px 0", textDecoration: "none", color: "var(--fg)" }}
+            >
+              <span aria-hidden>{n.severity === "overdue" ? "🔴" : "🟡"}</span>
+              <span style={{ fontSize: 14 }}>{n.text}</span>
+            </Link>
+          ))}
+          {nudges.length > 8 && (
+            <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>+{nudges.length - 8} more</div>
+          )}
+        </div>
+      )}
 
       {/* Payment snapshot */}
       <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
