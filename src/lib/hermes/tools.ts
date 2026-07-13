@@ -2,6 +2,7 @@ import { listActiveDeals, getDeal } from "@/lib/deals";
 import { listDeliverables } from "@/lib/deliverables";
 import { listCalendarEvents } from "@/lib/calendar";
 import { formatMoney } from "@/lib/format";
+import type { HermesProposal } from "@/lib/hermes/types";
 
 /** LLM-agnostic tool definition (JSON-schema `parameters`). */
 export type ToolDef = {
@@ -57,6 +58,106 @@ export const HERMES_TOOLS: ToolDef[] = [
     parameters: { type: "object", properties: {} },
   },
 ];
+
+/**
+ * Hermes's WRITE tools. Calling one does NOT mutate anything — the route turns
+ * the call into a HermesProposal that the UI renders as a Confirm/Cancel card.
+ * Only the creator's click executes it (see src/app/app/hermes-actions.ts).
+ */
+export const HERMES_WRITE_TOOLS: ToolDef[] = [
+  {
+    name: "set_stage",
+    description:
+      "PROPOSE moving a deal to a new pipeline stage. Does not take effect until the creator confirms.",
+    parameters: {
+      type: "object",
+      properties: {
+        dealId: { type: "string" },
+        stage: {
+          type: "string",
+          description: "proposal | briefed | drafting | submitted | in_review | approved | posted | invoiced | paid",
+        },
+      },
+      required: ["dealId", "stage"],
+    },
+  },
+  {
+    name: "set_payment_status",
+    description: "PROPOSE changing a deal's payment status. Requires the creator's confirmation.",
+    parameters: {
+      type: "object",
+      properties: {
+        dealId: { type: "string" },
+        paymentStatus: { type: "string", description: "unpaid | invoiced | paid | overdue" },
+      },
+      required: ["dealId", "paymentStatus"],
+    },
+  },
+  {
+    name: "add_deliverable",
+    description: "PROPOSE adding a deliverable to a deal. Requires the creator's confirmation.",
+    parameters: {
+      type: "object",
+      properties: {
+        dealId: { type: "string" },
+        title: { type: "string" },
+        dueDate: { type: "string", description: "YYYY-MM-DD, optional" },
+        platform: { type: "string", description: "optional: instagram | tiktok | youtube | facebook | other" },
+      },
+      required: ["dealId", "title"],
+    },
+  },
+  {
+    name: "draft_message",
+    description:
+      "PROPOSE drafting a note/proposal/follow-up to log on a deal's communication thread. Requires the creator's confirmation before it is saved.",
+    parameters: {
+      type: "object",
+      properties: {
+        dealId: { type: "string" },
+        body: { type: "string" },
+      },
+      required: ["dealId", "body"],
+    },
+  },
+];
+
+export const WRITE_TOOL_NAMES = new Set(HERMES_WRITE_TOOLS.map((t) => t.name));
+
+/** Turn a write-tool call into a confirmable proposal (no mutation happens here). */
+export async function buildProposal(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<HermesProposal | null> {
+  const dealId = String(args.dealId ?? "");
+  const deal = dealId ? await getDeal(dealId) : null;
+  const title = deal?.title ?? "this deal";
+  const base = { dealId, dealTitle: deal?.title, args };
+  switch (name) {
+    case "set_stage":
+      return { ...base, action: "set_stage", summary: `Move “${title}” to stage “${String(args.stage)}”.` };
+    case "set_payment_status":
+      return {
+        ...base,
+        action: "set_payment_status",
+        summary: `Set “${title}” payment status to “${String(args.paymentStatus)}”.`,
+      };
+    case "add_deliverable":
+      return {
+        ...base,
+        action: "add_deliverable",
+        summary: `Add deliverable “${String(args.title)}”${args.dueDate ? ` (due ${String(args.dueDate)})` : ""} to “${title}”.`,
+      };
+    case "draft_message":
+      return {
+        ...base,
+        action: "draft_message",
+        summary: `Save this note to “${title}”'s thread:\n\n“${String(args.body)}”`,
+      };
+    default:
+      return null;
+  }
+}
 
 type ToolInput = Record<string, unknown>;
 

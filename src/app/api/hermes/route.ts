@@ -1,6 +1,13 @@
 import { getUser } from "@/lib/auth";
 import { todayISO } from "@/lib/format";
-import { HERMES_TOOLS, executeHermesTool, type ToolDef } from "@/lib/hermes/tools";
+import {
+  HERMES_TOOLS,
+  HERMES_WRITE_TOOLS,
+  WRITE_TOOL_NAMES,
+  buildProposal,
+  executeHermesTool,
+  type ToolDef,
+} from "@/lib/hermes/tools";
 
 // Hermes runs on the shared Ollama-cloud endpoint (from the Hermes Gateway),
 // which is OpenAI-compatible — OLLAMA_BASE_URL ends in /v1.
@@ -27,8 +34,9 @@ function systemPrompt() {
     "You are Hermes, the AI copilot inside DIAB — a deal-management app for social-media creators.",
     `Today is ${todayISO()}.`,
     "Answer questions about the creator's deals, deliverables, payments, and schedule.",
-    "ALWAYS use the tools to look up data — never invent deal data, amounts, dates, or statuses. If a tool returns nothing, say so.",
-    "You are read-only right now: you can look things up and advise, but you cannot send emails or change deals. If asked to take an action, say it's coming soon and that the creator will confirm every change.",
+    "ALWAYS use the read tools to look up data — never invent deal data, amounts, dates, or statuses. If a tool returns nothing, say so.",
+    "You can also PROPOSE changes with the write tools (set_stage, set_payment_status, add_deliverable, draft_message). Calling one does NOT change anything — it shows the creator a confirmation card they must approve. First look up the deal to get its id, then call the write tool with exact values. In your text, briefly say what you're proposing.",
+    "Never claim you already made a change — you only propose; the creator confirms.",
     "Be concise and practical. Lead with the answer.",
   ].join(" ");
 }
@@ -43,7 +51,7 @@ async function chat(messages: ChatMsg[]) {
     body: JSON.stringify({
       model: HERMES_MODEL,
       messages,
-      tools: openaiTools(HERMES_TOOLS),
+      tools: openaiTools([...HERMES_TOOLS, ...HERMES_WRITE_TOOLS]),
       tool_choice: "auto",
       stream: false,
     }),
@@ -75,6 +83,19 @@ export async function POST(req: Request) {
       if (!msg) return Response.json({ text: "Hermes returned no response." });
 
       const calls = msg.tool_calls ?? [];
+
+      // A write-tool call becomes a proposal — nothing is executed here.
+      const writeCall = calls.find((c) => WRITE_TOOL_NAMES.has(c.function.name));
+      if (writeCall) {
+        const proposal = await buildProposal(writeCall.function.name, safeParse(writeCall.function.arguments));
+        if (proposal) {
+          return Response.json({
+            text: (msg.content ?? "").trim() || "Here's what I'd change — confirm to apply:",
+            proposal,
+          });
+        }
+      }
+
       if (calls.length > 0) {
         convo.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
         for (const call of calls) {

@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { HermesProposal } from "@/lib/hermes/types";
+import { confirmHermesAction } from "./hermes-actions";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -9,6 +11,7 @@ export function HermesChat() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [proposal, setProposal] = useState<HermesProposal | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   async function send(e: React.FormEvent) {
@@ -26,14 +29,38 @@ export function HermesChat() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ messages: next }),
       });
-      const data = (await res.json()) as { text?: string };
-      setMessages((m) => [...m, { role: "assistant", content: data.text ?? "…" }]);
+      const data = (await res.json()) as { text?: string; proposal?: HermesProposal };
+      if (data.text) setMessages((m) => [...m, { role: "assistant", content: data.text! }]);
+      if (data.proposal) setProposal(data.proposal);
     } catch {
       setMessages((m) => [...m, { role: "assistant", content: "Something went wrong reaching Hermes." }]);
     } finally {
       setBusy(false);
       requestAnimationFrame(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight));
     }
+  }
+
+  async function confirm() {
+    if (!proposal || busy) return;
+    setBusy(true);
+    const p = proposal;
+    setProposal(null);
+    try {
+      const r = await confirmHermesAction(p);
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: r.ok ? `✓ ${r.message}` : `⚠ Couldn't apply: ${r.message}` },
+      ]);
+    } catch {
+      setMessages((m) => [...m, { role: "assistant", content: "⚠ Couldn't apply that change." }]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function cancel() {
+    setProposal(null);
+    setMessages((m) => [...m, { role: "assistant", content: "Okay, cancelled — nothing changed." }]);
   }
 
   if (!open) {
@@ -65,6 +92,19 @@ export function HermesChat() {
         ))}
         {busy && <div style={{ color: "var(--muted)", fontSize: 13 }}>Hermes is thinking…</div>}
       </div>
+
+      {proposal && (
+        <div style={proposalCard}>
+          <div style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600, marginBottom: 4 }}>
+            Proposed change — needs your confirmation
+          </div>
+          <div style={{ fontSize: 14, whiteSpace: "pre-wrap", marginBottom: 10 }}>{proposal.summary}</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={confirm} disabled={busy} style={confirmBtn}>Confirm</button>
+            <button onClick={cancel} disabled={busy} style={cancelBtn}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={send} style={inputRow}>
         <input
@@ -105,6 +145,30 @@ const userBubble: React.CSSProperties = {
 const botBubble: React.CSSProperties = {
   display: "inline-block", background: "#191921", color: "var(--fg)",
   padding: "7px 11px", borderRadius: 12, fontSize: 14, whiteSpace: "pre-wrap", maxWidth: "90%",
+};
+const proposalCard: React.CSSProperties = {
+  margin: "0 12px 10px",
+  padding: "10px 12px",
+  border: "1px solid #4a3a1f",
+  background: "#171310",
+  borderRadius: 10,
+};
+const confirmBtn: React.CSSProperties = {
+  border: "none",
+  background: "#2f7d4f",
+  color: "#eafff0",
+  fontWeight: 600,
+  borderRadius: 8,
+  padding: "7px 16px",
+  cursor: "pointer",
+};
+const cancelBtn: React.CSSProperties = {
+  border: "1px solid #2a2a33",
+  background: "transparent",
+  color: "var(--fg)",
+  borderRadius: 8,
+  padding: "7px 16px",
+  cursor: "pointer",
 };
 const inputRow: React.CSSProperties = { display: "flex", gap: 8, padding: 12, borderTop: "1px solid #1e1e26" };
 const inputBox: React.CSSProperties = {
